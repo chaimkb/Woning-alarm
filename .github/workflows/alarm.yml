@@ -1,0 +1,32 @@
+name: NMG woningalarm
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: woningalarm
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check nmgwonen.nl
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python3 nmg_woningalarm.py --once
+
+      - name: Onthoud geziene woningen
+        run: |
+          git config user.name "woningalarm"
+          git config user.email "woningalarm@users.noreply.github.com"
+          git add nmg_gezien.json
+          git diff --staged --quiet || (git commit -m "update geziene woningen" && git push)
